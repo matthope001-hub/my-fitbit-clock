@@ -1,6 +1,7 @@
 name: Build Fitbit Clock Face
 
 on:
+  workflow_dispatch:
   push:
     paths:
       - 'build-request.json'
