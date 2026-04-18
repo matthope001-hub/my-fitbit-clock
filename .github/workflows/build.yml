@@ -28,6 +28,9 @@ jobs:
       - name: Generate source files from config
         run: node .github/workflows/scripts/generate-source.js
 
+      - name: Show generated package.json
+        run: cat package.json
+
       - name: Build FBA
         run: npx fitbit-build
 
