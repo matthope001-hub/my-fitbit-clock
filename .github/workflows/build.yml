@@ -22,14 +22,14 @@ jobs:
         with:
           node-version: '18'
 
-      - name: Install Fitbit SDK
-        run: npm install --save-dev @fitbit/sdk@~6.2.0-pre.1 @fitbit/sdk-cli@~1.8.0-pre.10
-
       - name: Generate source files from config
         run: node .github/workflows/scripts/generate-source.js
 
       - name: Show generated package.json
         run: cat package.json
+
+      - name: Install Fitbit SDK
+        run: npm install
 
       - name: Build FBA
         run: npx fitbit-build
