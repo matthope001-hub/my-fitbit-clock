@@ -1,0 +1,61 @@
+name: Build Fitbit Clock Face
+
+on:
+  push:
+    paths:
+      - 'build-request.json'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Read build config
+        run: |
+          echo "=== Build Request ==="
+          cat build-request.json
+
+      - name: Install Fitbit SDK
+        run: npm install --save-dev @fitbit/sdk@~6.2.0-pre.1 @fitbit/sdk-cli@~1.8.0-pre.10
+
+      - name: Generate source files from config
+        run: node scripts/generate-source.js
+
+      - name: Build FBA
+        run: npx fitbit-build
+
+      - name: Copy to predictable filename
+        run: |
+          ls build/
+          cp build/*.fba build/clockface.fba
+
+      - name: Write success status
+        run: |
+          echo '{"status":"success","built_at":"'$(date -u +%Y-%m-%dT%H:%M:%SZ)'"}' > build/status.json
+
+      - name: Commit results back
+        run: |
+          git config user.name "Fitbit Builder"
+          git config user.email "builder@fitbitforge.local"
+          git add build/clockface.fba build/status.json
+          git commit -m "✅ Clock face built [skip ci]" || echo "No changes"
+          git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Save FBA as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: clockface-fba
+          path: build/clockface.fba
+          retention-days: 30
