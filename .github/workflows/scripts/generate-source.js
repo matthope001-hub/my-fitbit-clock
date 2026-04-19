@@ -10,33 +10,30 @@ var showDate = req.showDate !== false;
 var showStats = req.showStats === true;
 var appName = req.appName || 'My Photo Clock';
 var hasTime = timePos !== 'none';
-
-// Generate a fresh valid UUID every time - ignore any broken one in request
 var uuid = crypto.randomUUID();
 
 if (!fs.existsSync('app')) fs.mkdirSync('app', { recursive: true });
 if (!fs.existsSync('resources')) fs.mkdirSync('resources', { recursive: true });
 if (!fs.existsSync('build')) fs.mkdirSync('build', { recursive: true });
 
-// package.json - all required Fitbit fields included
-var safeName = appName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'my-photo-clock';
+// package.json - SDK reads from the 'fitbit' key!
+// appDisplayName is the correct field (not displayName)
+// wipeColor is only required for appType 'app', not 'clockface'
 var pkg = {
-  name: safeName,
-  displayName: appName,
+  name: 'my-photo-clock',
   version: '1.0.0',
-  private: true,
-  appUUID: uuid,
-  appType: 'clockface',
-  buildTargets: ['rhea'],
-  wipeColor: '#000000',
-  requestedPermissions: showStats ? ['access_activity', 'access_heart_rate'] : [],
-  devDependencies: {
-    '@fitbit/sdk': '~6.2.0-pre.1',
-    '@fitbit/sdk-cli': '~1.8.0-pre.10'
+  fitbit: {
+    appUUID: uuid,
+    appType: 'clockface',
+    appDisplayName: appName,
+    buildTargets: ['rhea'],
+    requestedPermissions: showStats ? ['access_activity', 'access_heart_rate'] : [],
+    defaultLanguage: 'en-US'
   }
 };
 fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2));
-console.log('package.json written, UUID: ' + uuid);
+console.log('package.json written with fitbit key, UUID: ' + uuid);
+console.log('appDisplayName: ' + appName);
 
 // app/index.js
 var appLines = [];
@@ -82,7 +79,6 @@ if (showStats) {
 }
 appLines.push('};');
 fs.writeFileSync('app/index.js', appLines.join('\n'));
-console.log('app/index.js written');
 
 // resources/index.view
 var yT = timePos === 'top' ? '14%' : timePos === 'center' ? '50%' : '86%';
@@ -103,7 +99,6 @@ if (hasTime && showDate) {
 }
 viewLines.push('</svg>');
 fs.writeFileSync('resources/index.view', viewLines.join('\n'));
-console.log('resources/index.view written');
 
 // resources/styles.css
 var ov = timePos === 'bottom' ? 'x: 0; y: 72%; width: 100%; height: 28%;'
@@ -114,6 +109,5 @@ css += '.date { font-size: 20; fill: white; opacity: 0.85; letter-spacing: 2; }\
 css += '.stat { font-size: 16; fill: white; opacity: 0.85; }\n';
 css += '.overlay { ' + ov + ' fill: rgba(0,0,0,0.45); }\n';
 fs.writeFileSync('resources/styles.css', css);
-console.log('resources/styles.css written');
 
-console.log('All source files generated successfully for: ' + appName);
+console.log('All source files generated OK for: ' + appName);
