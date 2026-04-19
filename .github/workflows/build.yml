@@ -22,31 +22,36 @@ jobs:
         with:
           node-version: '18'
 
-      - name: Generate source files from config
+      - name: Install Fitbit SDK
+        run: npm install --save-dev @fitbit/sdk@~6.2.0-pre.1 @fitbit/sdk-cli@~1.8.0-pre.10
+
+      - name: Generate fresh app ID
+        run: npx fitbit-build generate-appid
+
+      - name: Generate all source files
         run: node .github/workflows/scripts/generate-source.js
 
-      - name: Verify package.json
+      - name: Merge UUIDs - keep generated one but add required fields
         run: |
-          echo "=== package.json ==="
-          cat package.json
-          echo "=== Validating UUID ==="
-          node -e "const p=require('./package.json'); console.log('UUID:', p.appUUID); console.log('Name:', p.displayName); console.log('Targets:', p.buildTargets);"
+          node -e "
+          var fs = require('fs');
+          var generated = JSON.parse(fs.readFileSync('package.json','utf8'));
+          var req = JSON.parse(fs.readFileSync('build-request.json','utf8'));
+          generated.displayName = req.appName || 'My Photo Clock';
+          generated.wipeColor = '#000000';
+          generated.buildTargets = ['rhea'];
+          generated.appType = 'clockface';
+          generated.requestedPermissions = req.showStats ? ['access_activity','access_heart_rate'] : [];
+          fs.writeFileSync('package.json', JSON.stringify(generated, null, 2));
+          console.log('Final UUID:', generated.appUUID);
+          console.log('Final name:', generated.displayName);
+          "
 
-      - name: Install Fitbit SDK in isolated folder
-        run: |
-          mkdir -p /tmp/fitbit-sdk
-          cd /tmp/fitbit-sdk
-          npm init -y
-          npm install --save-dev @fitbit/sdk@~6.2.0-pre.1 @fitbit/sdk-cli@~1.8.0-pre.10
-          echo "SDK installed at /tmp/fitbit-sdk"
-          ls node_modules/.bin/fitbit-build
+      - name: Show final package.json
+        run: cat package.json
 
-      - name: Build FBA using isolated SDK
-        run: |
-          export PATH="/tmp/fitbit-sdk/node_modules/.bin:$PATH"
-          echo "=== Final package.json before build ==="
-          cat package.json
-          fitbit-build
+      - name: Build FBA
+        run: npx fitbit-build
 
       - name: Copy to predictable filename
         run: cp build/*.fba build/clockface.fba
