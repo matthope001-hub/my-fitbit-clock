@@ -16,9 +16,7 @@ if (!fs.existsSync('app')) fs.mkdirSync('app', { recursive: true });
 if (!fs.existsSync('resources')) fs.mkdirSync('resources', { recursive: true });
 if (!fs.existsSync('build')) fs.mkdirSync('build', { recursive: true });
 
-// package.json - SDK reads from the 'fitbit' key!
-// appDisplayName is the correct field (not displayName)
-// wipeColor is only required for appType 'app', not 'clockface'
+// package.json - SDK reads from the 'fitbit' key
 var pkg = {
   name: 'my-photo-clock',
   version: '1.0.0',
@@ -32,8 +30,7 @@ var pkg = {
   }
 };
 fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2));
-console.log('package.json written with fitbit key, UUID: ' + uuid);
-console.log('appDisplayName: ' + appName);
+console.log('package.json written, UUID: ' + uuid);
 
 // app/index.js
 var appLines = [];
@@ -80,22 +77,43 @@ if (showStats) {
 appLines.push('};');
 fs.writeFileSync('app/index.js', appLines.join('\n'));
 
-// resources/index.view
+// resources/widget.defs - required by Fitbit SDK
 var yT = timePos === 'top' ? '14%' : timePos === 'center' ? '50%' : '86%';
 var yD = timePos === 'top' ? '21%' : timePos === 'center' ? '57%' : '92%';
-var viewLines = [];
-viewLines.push('<svg class="background">');
-viewLines.push('  <image href="photo.png" x="0" y="0" width="100%" height="100%" />');
+var wdLines = [];
+wdLines.push('<svg>');
+wdLines.push('  <defs>');
+wdLines.push('    <link rel="stylesheet" href="styles.css" />');
+wdLines.push('    <image id="bg" href="photo.png" x="0" y="0" width="100%" height="100%" />');
 if (showStats) {
-  viewLines.push('  <text id="hrLabel" class="stat" x="30%" y="7%" text-anchor="middle" />');
-  viewLines.push('  <text id="stepsLabel" class="stat" x="70%" y="7%" text-anchor="middle" />');
+  wdLines.push('    <text id="hrLabel" class="stat" x="30%" y="7%" text-anchor="middle" />');
+  wdLines.push('    <text id="stepsLabel" class="stat" x="70%" y="7%" text-anchor="middle" />');
 }
 if (hasTime) {
-  viewLines.push('  <rect id="overlay" class="overlay" />');
-  viewLines.push('  <text id="timeLabel" class="time" x="50%" y="' + yT + '" text-anchor="middle" dominant-baseline="middle" />');
+  wdLines.push('    <rect id="overlay" class="overlay" />');
+  wdLines.push('    <text id="timeLabel" class="time" x="50%" y="' + yT + '" text-anchor="middle" dominant-baseline="middle" />');
 }
 if (hasTime && showDate) {
-  viewLines.push('  <text id="dateLabel" class="date" x="50%" y="' + yD + '" text-anchor="middle" dominant-baseline="middle" />');
+  wdLines.push('    <text id="dateLabel" class="date" x="50%" y="' + yD + '" text-anchor="middle" dominant-baseline="middle" />');
+}
+wdLines.push('  </defs>');
+wdLines.push('</svg>');
+fs.writeFileSync('resources/widget.defs', wdLines.join('\n'));
+
+// resources/index.view - references widget.defs
+var viewLines = [];
+viewLines.push('<svg class="background">');
+viewLines.push('  <use href="#bg" />');
+if (showStats) {
+  viewLines.push('  <use href="#hrLabel" />');
+  viewLines.push('  <use href="#stepsLabel" />');
+}
+if (hasTime) {
+  viewLines.push('  <use href="#overlay" />');
+  viewLines.push('  <use href="#timeLabel" />');
+}
+if (hasTime && showDate) {
+  viewLines.push('  <use href="#dateLabel" />');
 }
 viewLines.push('</svg>');
 fs.writeFileSync('resources/index.view', viewLines.join('\n'));
